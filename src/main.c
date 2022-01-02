@@ -4,22 +4,69 @@
 #include <math.h>
 #include <time.h>
 
-#include "parameters.h"
+#include "functions.h"
+
+struct parameters_t {
+	double x_i, x_f, t_f;
+	double dt;
+	unsigned int N;
+	
+
+	/*
+		General purpose xs and xps arrays to not allocate them numerous times
+	*/
+	double* xs;
+	double* xps;
+};
+typedef struct parameters_t parameters_t;
+
+int init_parameters(parameters_t* params) {
+	params->xs = malloc((params->N + 1) * sizeof(double));
+
+	if (params->xs == NULL) {
+		fprintf(stderr, "Failed to allocate %lu bytes of memory\n", (N+1)*sizeof(double));
+
+		return -1;
+	}
+
+	params->xps = malloc((params->N + 1) * sizeof(double));
+
+	if (params->xps == NULL) {
+		fprintf(stderr, "Failed to allocate %lu bytes of memory\n", (N+1)*sizeof(double));
+		free(params->xs);
+		return -1;
+	}
+
+	return 0;
+}
+
+double Vp(double x, double t) {
+	return (V(x + 0.001 * SCALE_FACTOR, t) - V(x, t)) / (0.001 * SCALE_FACTOR);
+}
+
+// Hopefully temporary
+double Vpp(double x, double t) {
+	return (Vp(x + 0.001 * SCALE_FACTOR, x) - Vp(x, t)) / (0.001 * SCALE_FACTOR);
+}
 
 /*
-	This does not solve euler lagrange. It is a placeholder working only for a null potential (= free particule)
-
-	* xs  : array of size N containing the different positions
-	* xps : array of size N containing the derivatives of xs
-	* N   : size of the arrays
-	* dt  : time step 
-
+	* Uses 4th order runge-kutta to solve euler-lagrange equations
 	* Initial conditions expected in xs: xs[0] = x_initial ; xs[N] = x_final
 */
-void solve_euler_lagrange(double* xs, double* xps, unsigned int N, double dt) {
-	for (unsigned int i = 0; i <= N; ++i) {
-		xps[i] = (xs[N] - xs[0]) / (N * dt);
-		xs[i] = xps[i] * i * dt + xs[0];
+void solve_euler_lagrange(parameters_t* params) {
+	for (unsigned int n = 0; n < params->N; ++n) {
+		double* x_n = &params->xs[n];
+		double* xp_n = &params->xps[n];
+		const double dt = params->dt;
+		const double t_n = n * dt;
+
+		const double k1 = -Vp(*x_n,                                         t_n) / M;
+		const double k2 = -Vp(*x_n + dt / 2.0 * *xp_n,                      t_n) / M;
+		const double k3 = -Vp(*x_n + dt / 2.0 * *xp_n + dt * dt / 4.0 * k1, t_n) / M;
+		const double k4 = -Vp(*x_n + dt * *xp_n + dt * dt / 2.0 * k2,       t_n) / M;
+
+		*(x_n + 1)  = *x_n + dt * *xp_n + dt * dt / 6 * (k1 + k2 + k3);
+		*(xp_n + 1) = *xp_n + dt / 6.0 * (k1 + 2.0 * k2 + 2.0 * k3 + k4);
 	}
 }
 
@@ -34,6 +81,8 @@ double compute_lagrangian(double x_n, double xp_n, double t_n) {
 	Computes the action with initial and final positions provided in xs[0] and xs[N] respectively
 
 	Integrates from t_i = 0 to t_n = N * dt
+
+	TODO: No need to integrate when E = cte? c.f. Hamilton-Jacobi
 */
 double compute_action(double* xs, double* xps, unsigned int N, double dt) {
 	double partial_action = (compute_lagrangian(xs[0], xps[0], 0) + compute_lagrangian(xs[N], xps[N], N * dt)) / 2.0;
@@ -46,6 +95,8 @@ double compute_action(double* xs, double* xps, unsigned int N, double dt) {
 
 /*
 	Compute a prefactor for the propagator
+
+	TODO: No need to solve the differential equation, just need to derive the action
 */
 double compute_prefactor(double* xs, unsigned int N, double dt) {
 	// Initial conditions
@@ -179,3 +230,20 @@ int main(void) {
 	free(xs);
 	return EXIT_SUCCESS;
 }
+
+/*
+int main(void) {
+	parameters_t params;
+	params->N = 50;
+
+	if (init_parameters(&params) != 0)
+		return EXIT_FAILURE;
+
+	// Simulation window:
+	double x_min = 0.0, x_max = 0.0;
+	double t_min = 0.0, t_max = 0.0;
+
+
+	return EXIT_SUCCESS
+}
+*/
