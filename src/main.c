@@ -71,6 +71,40 @@ void solve_euler_lagrange(parameters_t* params) {
 }
 
 /*
+	* Function to solve Euler-Lagrange with boundary conditions
+*/
+int shoot_and_try(parameters_t* params) {
+	const unsigned int MAX_ITER_COUNT = 25;
+
+	params->xs[0] = params->x_i;
+	params->xs[params->N] = params->x_f;
+	double xp0_0 = params->xps[0], xp0_1 = params->xps[0];
+	
+	double err = 0, prev_err = 0;
+	for (unsigned int iter_count = 0; iter_count < MAX_ITER_COUNT; ++iter_count) {
+		params->xps[0] = xp0_1;
+		rk4(params);
+
+		err = fabs(params->xs[params->N] - params->x_f);
+		if (err < 1e-3 * SCALE_FACTOR)
+			return 0; // Yeah!!, we found the solution
+		else { // We did not find the solution yet
+			if (iter_count == 0)
+				xp0_1 = (2.0 * params->x_f - params->xs[params->N] - params->x_i) / params->t_f;
+			else {
+				const double tmp = xp0_1;
+				xp0_1 -= err * (xp0_1 - xp0_0) / (err - prev_err);
+				xp0_0 = tmp;
+			}
+		}
+
+		prev_err = err;
+	}
+
+	return -1;
+}
+
+/*
 	L = T - U = m/2 * (dx/dt)² - V(x, t)
 */
 double compute_lagrangian(double x_n, double xp_n, double t_n) {
