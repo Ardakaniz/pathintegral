@@ -1,7 +1,7 @@
 #pragma once
 
-#ifndef PARAMETERS_H
-#define PARAMETERS_H
+#ifndef FUNCTIONS_H
+#define FUNCTIONS_H
 
 #include "constants.h"
 #include <complex.h>
@@ -31,4 +31,4 @@ inline double complex wave_fn(double x) {
 //	return exp(-M * x * x / (2.0 * HBAR)); 
 }
 
-#endif // PARAMETERS_H
+#endif // FUNCTIONS_H
