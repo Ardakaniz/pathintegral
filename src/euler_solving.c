@@ -4,7 +4,7 @@
 #include <stdlib.h>
 
 int path_init(path_t* path) {
-	const unsigned int path_size = path->N + 1
+	const unsigned int path_size = path->N + 1;
 
 	path->xs = malloc(path_size * sizeof(double));
 
@@ -33,7 +33,7 @@ void path_free(path_t* path) {
 	free(path->xps);
 }
 
-void compute_lagrangian(double x, double xp, double t) {
+double compute_lagrangian(double x, double xp, double t) {
 	return M * xp * xp / 2.0 - V(x, t);
 }
 
@@ -46,9 +46,9 @@ void solve_euler_lagrange(path_t* path, double* action) {
 
 		if (action) {
 			if (n == 0)
-				*action = compute_lagrangian(x_n, xp_n, t_n) / 2.0;
+				*action = compute_lagrangian(*x_n, *xp_n, t_n) / 2.0;
 			else
-				*action += compute_lagrangian(x_n, xp_n, t_n);
+				*action += compute_lagrangian(*x_n, *xp_n, t_n);
 		}
 
 		const double k1 = -Vp(*x_n,                                         t_n) / M;
@@ -61,7 +61,7 @@ void solve_euler_lagrange(path_t* path, double* action) {
 	}
 
 	if (action)
-		*action = path->dt * (*action + compute_lagrangian(path->xs[path->N], path->xps[path->N], path->t_f) / 2.0)
+		*action = path->dt * (*action + compute_lagrangian(path->xs[path->N], path->xps[path->N], path->t_f) / 2.0);
 }
 
 int shoot_and_try(path_t* path, double* action) {

@@ -24,7 +24,7 @@ int path_init(path_t* path);
 void path_free(path_t* path);
 
 // Computes the lagragian at position x, velocity xp and time t
-double compute_lagrangian(double x, double xp, double t)
+double compute_lagrangian(double x, double xp, double t);
 
 // Computes the derivative of V
 inline double Vp(double x, double t);
