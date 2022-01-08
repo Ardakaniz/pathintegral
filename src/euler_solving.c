@@ -8,7 +8,7 @@ int path_init(path_t* path) {
 
 	path->xs = malloc(path_size * sizeof(double));
 
-	if (path->xs == NULL) {
+	if (!path->xs) {
 		fprintf(stderr, "Failed to allocate %lu bytes of memory\n", path_size*sizeof(double));
 
 		return -1;
@@ -16,7 +16,7 @@ int path_init(path_t* path) {
 
 	path->xps = malloc(path_size * sizeof(double));
 
-	if (path->xps == NULL) {
+	if (!path->xps) {
 		fprintf(stderr, "Failed to allocate %lu bytes of memory\n", path_size*sizeof(double));
 		free(path->xs);
 		return -1;
@@ -26,7 +26,7 @@ int path_init(path_t* path) {
 }
 
 void path_free(path_t* path) {
-	if (path == NULL)
+	if (!path)
 		return;
 
 	free(path->xs);
@@ -44,7 +44,7 @@ void solve_euler_lagrange(path_t* path, double* action) {
 		const double dt = path->dt;
 		const double t_n = n * dt;
 
-		if (action != NULL) {
+		if (action) {
 			if (n == 0)
 				*action = compute_lagrangian(x_n, xp_n, t_n) / 2.0;
 			else
@@ -60,7 +60,7 @@ void solve_euler_lagrange(path_t* path, double* action) {
 		*(xp_n + 1) = *xp_n + dt / 6.0 * (k1 + 2.0 * k2 + 2.0 * k3 + k4);
 	}
 
-	if (action != NULL)
+	if (action)
 		*action = path->dt * (*action + compute_lagrangian(path->xs[path->N], path->xps[path->N], path->t_f) / 2.0)
 }
 
