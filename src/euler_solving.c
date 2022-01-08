@@ -3,8 +3,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "functions.h"
-
 int path_init(path_t* path) {
 	const unsigned int path_size = path->N + 1
 
