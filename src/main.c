@@ -5,40 +5,7 @@
 #include <time.h>
 
 #include "functions.h"
-
-struct parameters_t {
-	double x_i, x_f, t_f;
-	double dt;
-	unsigned int N;
-	
-
-	/*
-		General purpose xs and xps arrays to not allocate them numerous times
-	*/
-	double* xs;
-	double* xps;
-};
-typedef struct parameters_t parameters_t;
-
-int init_parameters(parameters_t* params) {
-	params->xs = malloc((params->N + 1) * sizeof(double));
-
-	if (params->xs == NULL) {
-		fprintf(stderr, "Failed to allocate %lu bytes of memory\n", (N+1)*sizeof(double));
-
-		return -1;
-	}
-
-	params->xps = malloc((params->N + 1) * sizeof(double));
-
-	if (params->xps == NULL) {
-		fprintf(stderr, "Failed to allocate %lu bytes of memory\n", (N+1)*sizeof(double));
-		free(params->xs);
-		return -1;
-	}
-
-	return 0;
-}
+#include "euler_solving.h"
 
 double Vp(double x, double t) {
 	return (V(x + 0.001 * SCALE_FACTOR, t) - V(x, t)) / (0.001 * SCALE_FACTOR);
