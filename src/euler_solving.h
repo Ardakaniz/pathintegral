@@ -23,20 +23,27 @@ int path_init(path_t* path);
 /* Free path->xs and path->xps */
 void path_free(path_t* path);
 
+// Computes the lagragian at position x, velocity xp and time t
+double compute_lagrangian(double x, double xp, double t)
+
 /*
 	4th order runge-kutta method to solve Euler-Lagrange equations with initial conditions
 	Initial conditions expected:
 		* xs[0]  = initial_position
 		* xps[0] = initial_velocity
+
+	Also computes action on-the-fly if action is not NULL
 */
-void solve_euler_lagrange(path_t* path);
+void solve_euler_lagrange(path_t* path, double* action);
 
 /*
 	Shoot And Try method to solve Euler-Lagrange equations with boundary conditions
 	Boundary conditions expected:
 		* xs[0] = initial_position
 		* xs[N] = final_position
+
+	Also computes action on-the-fly if action is not NULL
 */
-int shoot_and_try(path_t* path);
+int shoot_and_try(path_t* path, double* action);
 
 #endif // EULER_SOLVING_H
