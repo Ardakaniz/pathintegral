@@ -39,25 +39,25 @@ double compute_lagrangian(double x, double xp, double t) {
 
 void solve_euler_lagrange(path_t* path, double* action) {
 	for (unsigned int n = 0; n < path->N; ++n) {
-		double* x_n = &path->xs[n];
-		double* xp_n = &path->xps[n];
+		double* xs = path->xs;
+		double* xps = path->xps;
 		const double dt = path->dt;
 		const double t_n = n * dt;
 
 		if (action) {
 			if (n == 0)
-				*action = compute_lagrangian(*x_n, *xp_n, t_n) / 2.0;
+				*action = compute_lagrangian(xs[n], xps[n], t_n) / 2.0;
 			else
-				*action += compute_lagrangian(*x_n, *xp_n, t_n);
+				*action += compute_lagrangian(xs[n], xps[n], t_n);
 		}
 
-		const double k1 = -Vp(*x_n,                                         t_n) / M;
-		const double k2 = -Vp(*x_n + dt / 2.0 * *xp_n,                      t_n) / M;
-		const double k3 = -Vp(*x_n + dt / 2.0 * *xp_n + dt * dt / 4.0 * k1, t_n) / M;
-		const double k4 = -Vp(*x_n + dt * *xp_n + dt * dt / 2.0 * k2,       t_n) / M;
+		const double k1 = -Vp(xs[n],                                         t_n) / M;
+		const double k2 = -Vp(xs[n] + dt / 2.0 * xs[n],                      t_n) / M;
+		const double k3 = -Vp(xs[n] + dt / 2.0 * xs[n] + dt * dt / 4.0 * k1, t_n) / M;
+		const double k4 = -Vp(xs[n] + dt * xs[n] + dt * dt / 2.0 * k2,       t_n) / M;
 
-		*(x_n + 1)  = *x_n + dt * *xp_n + dt * dt / 6 * (k1 + k2 + k3);
-		*(xp_n + 1) = *xp_n + dt / 6.0 * (k1 + 2.0 * k2 + 2.0 * k3 + k4);
+		xs[n + 1]  = xs[n]  + dt * xps[n] + dt * dt / 6 * (k1 + k2 + k3);
+		xps[n + 1] = xps[n] + dt / 6.0 * (k1 + 2.0 * k2 + 2.0 * k3 + k4);
 	}
 
 	if (action)
