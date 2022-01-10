@@ -27,7 +27,7 @@ void path_free(path_t* path);
 double compute_lagrangian(double x, double xp, double t);
 
 // Computes the derivative of V
-inline double Vp(double x, double t);
+static inline double Vp(double x, double t);
 
 /*
 	4th order runge-kutta method to solve Euler-Lagrange equations with initial conditions
