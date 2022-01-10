@@ -7,134 +7,151 @@
 #include "functions.h"
 #include "euler_solving.h"
 
-double Vp(double x, double t) {
-	return (V(x + 0.001 * SCALE_FACTOR, t) - V(x, t)) / (0.001 * SCALE_FACTOR);
-}
+struct pos_params_t {
+	double x_min, x_max;
+	unsigned int N;
+};
+typedef struct pos_params_t pos_params_t;
 
-double complex compute_propagator(double* xs, double* xps, double t_f, unsigned int N) {
-	const double dt = t_f / (double)N;
+struct time_params_t {
+	double t_min, t_max;
+	unsigned int K;
+};
+typedef struct time_params_t time_params_t;
 
-	solve_euler_lagrange(xs, xps, N, dt);
-	const double action = compute_action(xs, xps, N, dt);
-	const double prefactor = compute_prefactor(xs, N, dt);
+
+/*
+	*
+*/
+double* compute_probabilities(pos_params_t* pos_params, time_params_t* time_params, path_t* path) {
+	// First: we compute the additional data we need in order to make the calculations
+	// How to set x_i_min/max ? c.f. https://www.physics.mcgill.ca/~hilke/719.pdf p.30
+	const double x_i_min = -20.0 * sqrt(2.0 * HBAR * time_params->t_max / M);
+	const double x_i_max = -x_i_min;
+	const unsigned int P = 100; 
 	
-	const double complex propag = cexp(I * action / HBAR) * csqrt(M / (2.0 * PI * I * HBAR * prefactor));
+	const double dx_i = (x_i_max - x_i_min) / (double)P;
+	const double dx_f = (pos_params->x_max - pos_params->x_min) / pos_params->N;
 
-	return propag;
-}
+	double t_min = time_params->t_min;
+	const double dt = (time_params->t_max - t_min) / time_params->K;	
 
-double complex compute_wave_fn(double x, double t, double* xs, double* xps, unsigned int N) {
-	// How to set x_inf ? c.f. https://www.physics.mcgill.ca/~hilke/719.pdf p.30
+	// pos_params actually holds the values of x_f_min and x_f_max
+	// We can calculate the adapted x_i_min and x_i_max requiring minimal iteration count using pos_params and time_params
 
-	const double x_inf = 20 * sqrt(2 * HBAR * t / M); // <- '20' = arbitrary value...
-	const unsigned int p_inf = 150;
-	const double dx = x_inf / (double)p_inf;
+	double* probabilities   = malloc((time_params->K + 1) * (pos_params->N + 1) * sizeof(double));
+	double* last_xpN        = malloc((time_params->K + 1) * sizeof(double));
+	double* partial_wave_fn = malloc((time_params->K + 1) * sizeof(double));
 
-	double complex partial_wave_fn = 0.0;
+	for (unsigned int n = 0; n <= pos_params->N; ++n) { // x_f
+		double first_postfactor;
 
-	xs[0] = -x_inf + x;
-	xs[N] = x;
-	partial_wave_fn += compute_propagator(xs, xps, t, N) * wave_fn(-x_inf + x);
+		for (unsigned int p = 0; p <= P; ++p) { // x_i
+			path->x_i = x_i_min            + dx_i * p;
+			path->x_f = pos_params->x_min  + dx_f * n;
 
-	xs[0] = x_inf;
-	xs[N] = x;
-	partial_wave_fn += compute_propagator(xs, xps, t, N) * wave_fn(x_inf + x);
+			double dt_multiplier = 1.0;
 
-	partial_wave_fn /= 2.0;
+			double action;
+			for (unsigned int k = 0; t_min + dt * k <= time_params->t_max; ++k) {
+				path->t_f = t_min + dt * k;
+				path->dt = path->t_f / path->N * dt_multiplier;
 
-	for (int p = -(int)p_inf + 1; p <= (int)p_inf - 1; ++p) {
-		const double x0 = p * dx + x;
-		xs[0] = x0;
-		xs[N] = x;
-		partial_wave_fn += compute_propagator(xs, xps, t, N) * wave_fn(x0);
-	}
+				path->xps[0] = (path->x_f - path->x_i) / path->t_f;
 
-	return partial_wave_fn * dx;
-}
+				int result = shoot_and_try(path, &action);
 
-int main(void) {
-	const unsigned int N = 100;
-	double* xs = malloc((N + 1) * sizeof(double));
-	if (xs == NULL) {
-		fprintf(stderr, "Failed to allocate %lu bytes of memory\n", (N+1)*sizeof(double));
-		
-		return EXIT_FAILURE;
-	}
+				if (result != 0) { // If we failed to find the trajectory
+					if (1/*path->dt < 1.0e-10*/) { // FAILED TO FIND, RIP...
+						printf("Failed to find trajectory, aborting...\n");
+						
+						free(probabilities);
+						free(last_xpN);
+						free(partial_wave_fn);
 
-	double* xps = malloc((N + 1) * sizeof(double));
-	if (xps == NULL) {
-		free(xs);
+						return NULL;
+					}
 
-		fprintf(stderr, "Failed to allocate %lu bytes of memory\n", (N+1)*sizeof(double));
+					t_min += (k - 1) * path->dt; // We get back to the previous iteration (or decrease t_f_min if k == 0)
+					dt_multiplier *= 0.5;        // We improve the timestep 
+					k = 0;
+				}
 
-		return EXIT_FAILURE;
-	}
+				if (1 /* condition to determine */) {
+					const double complex postfactor = cexp(I * action / HBAR) * wave_fn(path->x_i);
 
-	FILE* file = fopen("out.dat", "w");
+					if (p == 0) // We assume here P >= 2
+						first_postfactor = postfactor; // we store the postfactor here because we cant compute the derivative of the prefactor (we need p = 1 also)
+					else {
+						const double complex prefactor = csqrt(-M * (path->xps[path->N] - last_xpN[k]) / (2.0 * PI * I * HBAR * dx_i) );
+						const double complex factor = prefactor * postfactor;
+						
+						if (p == 1) {
+							const double complex prev_factor = prefactor * first_postfactor;
+							partial_wave_fn[k] = prev_factor * 0.5 + factor;
+						}
+						else if (p == P) {
+							partial_wave_fn[k] += factor * 0.5;
+							partial_wave_fn[k] *= dx_i;
 
-	if (file == NULL) {
-		free(xps);
-		free(xs);
-
-		fprintf(stderr, "Failed to write to file 'out.dat'\n");
-
-		return EXIT_FAILURE;
-	}
-
-	clock_t begin = clock();
-
-	const double x_inf = 0.6 * SCALE_FACTOR;
-	const int p_inf = 100;
-	const double dx = x_inf / (double)p_inf;
-
-	const double t_min = 0.001 * TIME_FACTOR, t_max = 0.2 * TIME_FACTOR;
-	const unsigned int t_count = 100;
-	const double dt = (t_max - t_min) / (double)t_count;
-
-	fprintf(file, "%le %le %le %u ", t_min / TIME_FACTOR, t_max / TIME_FACTOR, x_inf / SCALE_FACTOR, (2 * p_inf + 1));
-
-	for (unsigned int i = 0; i < t_count; ++i) {
-		if (i % (t_count / 10) == 0) {
-			printf("%.0f%%...", 100.0 * (double)i / (double)t_count);
-			fflush(stdout);
-		}
-
-		const double t = i * dt + t_min;
-		
-		for (int p = -p_inf; p <= p_inf; ++p) {
-			const double x = p * dx;
-
-			const double complex xt_wave_fn = compute_wave_fn(x, t, xs, xps, N);
-			const double sq_norm = creal(xt_wave_fn * conj(xt_wave_fn)) * SCALE_FACTOR;
-
-			fprintf(file, "%le ", sq_norm);
+							// wave function is now complete!
+							probabilities[k * (pos_params->N + 1) + n] = creal(partial_wave_fn[k] * conj(partial_wave_fn[k])) * SCALE_FACTOR;
+						}
+						else
+							partial_wave_fn[k] += factor;	
+					}
+					last_xpN[k] = path->xps[path->N];
+				}
+			}
 		}
 	}
 
-	clock_t end = clock();
-	double time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
-	printf("Total time exceeded: %f\n", time_spent);
+	free(last_xpN);
+	free(partial_wave_fn);
+	return probabilities;
+}
+
+void output_probabilities(double* probabilities, pos_params_t* pos_params, time_params_t* time_params, const char* filename) {
+	FILE* file = fopen(filename, "w");
+	if (!file) {
+		fprintf(stderr, "Failed to open file %s!", filename);
+		return;
+	}
+
+	for (unsigned int i = 0; i < (pos_params->N + 1); ++i)
+		fprintf(file, "%e ", probabilities[i]);
 
 	fclose(file);
+}
 
-	free(xps);
-	free(xs);
+
+int main(void) {
+	/********************* Simulation parameters **********************/
+	pos_params_t pos_params   = { .x_min = -1.0 * SCALE_FACTOR, .x_max = 1.0 * SCALE_FACTOR, .N = 200 };
+	time_params_t time_params = { .t_min = 0.000001 * TIME_FACTOR, .t_max = 0.2 * TIME_FACTOR, .K = 100 };
+	////////////////////////////////////////////////////////////////////
+
+	path_t path;
+	path.N = 100;
+
+	if (path_init(&path) != 0)
+		return EXIT_FAILURE;
+
+	clock_t clk_begin = clock();
+
+	double* probabilities = compute_probabilities(&pos_params, &time_params, &path);
+	if (probabilities == NULL) {
+		path_free(&path);
+		return EXIT_FAILURE;
+	}
+
+	clock_t clk_end = clock();
+	double time_spent = (double)(clk_end - clk_begin) / CLOCKS_PER_SEC;
+	printf("Total time exceeded: %fs\n", time_spent);
+
+	output_probabilities(probabilities, &pos_params, &time_params, "out.dat");
+	
+	path_free(&path);
 	return EXIT_SUCCESS;
 }
 
-/*
-int main(void) {
-	parameters_t params;
-	params->N = 50;
-
-	if (init_parameters(&params) != 0)
-		return EXIT_FAILURE;
-
-	// Simulation window:
-	double x_min = 0.0, x_max = 0.0;
-	double t_min = 0.0, t_max = 0.0;
-
-
-	return EXIT_SUCCESS
-}
-*/
