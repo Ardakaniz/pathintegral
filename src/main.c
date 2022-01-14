@@ -39,9 +39,9 @@ double* compute_probabilities(pos_params_t* pos_params, time_params_t* time_para
 	// pos_params actually holds the values of x_f_min and x_f_max
 	// We can calculate the adapted x_i_min and x_i_max requiring minimal iteration count using pos_params and time_params
 
-	double* probabilities   = malloc((time_params->K + 1) * (pos_params->N + 1) * sizeof(double));
-	double* last_xpN        = malloc((time_params->K + 1) * sizeof(double));
-	double* partial_wave_fn = malloc((time_params->K + 1) * sizeof(double));
+	double* probabilities           = malloc((time_params->K + 1) * (pos_params->N + 1) * sizeof(double));
+	double* last_xpN                = malloc((time_params->K + 1) * sizeof(double));
+	double complex* partial_wave_fn = malloc((time_params->K + 1) * sizeof(double complex));
 
 	for (unsigned int n = 0; n <= pos_params->N; ++n) { // x_f
 		double first_postfactor;
