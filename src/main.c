@@ -34,7 +34,7 @@ double* compute_probabilities(pos_params_t* pos_params, time_params_t* time_para
 	const double dx_f = (pos_params->x_max - pos_params->x_min) / pos_params->N;
 
 	double t_min = time_params->t_min;
-	const double dt = (time_params->t_max - t_min) / time_params->K;	
+	double time_dt = (time_params->t_max - t_min) / time_params->K;	
 
 	// pos_params actually holds the values of x_f_min and x_f_max
 	// We can calculate the adapted x_i_min and x_i_max requiring minimal iteration count using pos_params and time_params
@@ -50,13 +50,10 @@ double* compute_probabilities(pos_params_t* pos_params, time_params_t* time_para
 			path->x_i = x_i_min            + dx_i * p;
 			path->x_f = pos_params->x_min  + dx_f * n;
 
-			double dt_multiplier = 1.0;
-
 			double action;
-			for (unsigned int k = 0; t_min + dt * k <= time_params->t_max; ++k) {
-				path->t_f = t_min + dt * k;
-				path->dt = path->t_f / path->N * dt_multiplier;
-
+			path->t_f = time_params->t_min;
+			for (unsigned int k = 0; path->t_f <= time_params->t_max; ++k, path->t_f += time_dt) {
+				path->dt = path->t_f / path->N;
 				path->xps[0] = (path->x_f - path->x_i) / path->t_f;
 
 				int result = shoot_and_try(path, &action);
@@ -73,7 +70,7 @@ double* compute_probabilities(pos_params_t* pos_params, time_params_t* time_para
 					}
 
 					t_min += (k - 1) * path->dt; // We get back to the previous iteration (or decrease t_f_min if k == 0)
-					dt_multiplier *= 0.5;        // We improve the timestep 
+					time_dt *= 0.5;        // We improve the timestep 
 					k = 0;
 				}
 
