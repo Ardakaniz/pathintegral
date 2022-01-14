@@ -26,9 +26,9 @@ typedef struct time_params_t time_params_t;
 double* compute_probabilities(pos_params_t* pos_params, time_params_t* time_params, path_t* path) {
 	// First: we compute the additional data we need in order to make the calculations
 	// How to set x_i_min/max ? c.f. https://www.physics.mcgill.ca/~hilke/719.pdf p.30
-	const double x_i_min = -20.0 * sqrt(2.0 * HBAR * time_params->t_max / M);
-	const double x_i_max = -x_i_min;
-	const unsigned int P = 100; 
+	const double x_i_min = -5 * SCALE_FACTOR;
+	const double x_i_max = 5 * SCALE_FACTOR;
+	const unsigned int P = 200; 
 	
 	const double dx_i = (x_i_max - x_i_min) / (double)P;
 	const double dx_f = (pos_params->x_max - pos_params->x_min) / pos_params->N;
@@ -59,7 +59,7 @@ double* compute_probabilities(pos_params_t* pos_params, time_params_t* time_para
 				int result = shoot_and_try(path, &action);
 
 				if (result != 0) { // If we failed to find the trajectory
-					if (1/*path->dt < 1.0e-10*/) { // FAILED TO FIND, RIP...
+					//if (path->dt < 1.0e-10) { // FAILED TO FIND, RIP...
 						printf("Failed to find trajectory, aborting...\n");
 						
 						free(probabilities);
@@ -67,7 +67,7 @@ double* compute_probabilities(pos_params_t* pos_params, time_params_t* time_para
 						free(partial_wave_fn);
 
 						return NULL;
-					}
+					//}
 
 					t_min += (k - 1) * path->dt; // We get back to the previous iteration (or decrease t_f_min if k == 0)
 					time_dt *= 0.5;        // We improve the timestep 
@@ -80,7 +80,7 @@ double* compute_probabilities(pos_params_t* pos_params, time_params_t* time_para
 					if (p == 0) // We assume here P >= 2
 						first_postfactor = postfactor; // we store the postfactor here because we cant compute the derivative of the prefactor (we need p = 1 also)
 					else {
-						const double complex prefactor = csqrt(-M * (path->xps[path->N] - last_xpN[k]) / (2.0 * PI * I * HBAR * dx_i) );
+						const double complex prefactor = csqrt(-M * (path->xps[path->N] - last_xpN[k]) / (2.0 * PI * I * HBAR * dx_i));
 						const double complex factor = prefactor * postfactor;
 						
 						if (p == 1) {
@@ -115,7 +115,7 @@ void output_probabilities(double* probabilities, pos_params_t* pos_params, time_
 		return;
 	}
 
-	for (unsigned int i = 0; i < (pos_params->N + 1); ++i)
+	for (unsigned int i = 0; i < (pos_params->N + 1) * (time_params->K + 1); ++i)
 		fprintf(file, "%e ", probabilities[i]);
 
 	fclose(file);
@@ -124,12 +124,12 @@ void output_probabilities(double* probabilities, pos_params_t* pos_params, time_
 
 int main(void) {
 	/********************* Simulation parameters **********************/
-	pos_params_t pos_params   = { .x_min = -1.0 * SCALE_FACTOR, .x_max = 1.0 * SCALE_FACTOR, .N = 200 };
-	time_params_t time_params = { .t_min = 0.000001 * TIME_FACTOR, .t_max = 0.2 * TIME_FACTOR, .K = 100 };
+	pos_params_t pos_params   = { .x_min = 2.0 * SCALE_FACTOR, .x_max = 8.0 * SCALE_FACTOR, .N = 150 };
+	time_params_t time_params = { .t_min = 0.5 * TIME_FACTOR, .t_max = 1.5 * TIME_FACTOR, .K = 150 };
 	////////////////////////////////////////////////////////////////////
 
 	path_t path;
-	path.N = 100;
+	path.N = 50;
 
 	if (path_init(&path) != 0)
 		return EXIT_FAILURE;
@@ -151,4 +151,3 @@ int main(void) {
 	path_free(&path);
 	return EXIT_SUCCESS;
 }
-
