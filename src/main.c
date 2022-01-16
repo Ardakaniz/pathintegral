@@ -115,6 +115,13 @@ void output_probabilities(double* probabilities, pos_params_t* pos_params, time_
 		return;
 	}
 
+	fprintf(file, "%e %e %e %e %u ", time_params->t_min / TIME_FACTOR,
+	                                  time_params->t_max / TIME_FACTOR,
+	                                  pos_params->x_min  / SCALE_FACTOR,
+	                                  pos_params->x_max  / SCALE_FACTOR,
+	                                  pos_params->N + 1
+	);
+
 	for (unsigned int i = 0; i < (pos_params->N + 1) * (time_params->K + 1); ++i)
 		fprintf(file, "%e ", probabilities[i]);
 
