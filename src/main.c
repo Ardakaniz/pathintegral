@@ -145,9 +145,8 @@ int main(void) {
 	clock_t clk_end = clock();
 	double time_spent = (double)(clk_end - clk_begin) / CLOCKS_PER_SEC;
 	printf("Total time exceeded: %fs\n", time_spent);
-
-	output_probabilities(probabilities, &pos_params, &time_params, "out.dat");
 	
+	free(probabilities);
 	path_free(&path);
 	return EXIT_SUCCESS;
 }
