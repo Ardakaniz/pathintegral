@@ -52,29 +52,32 @@ double* compute_probabilities(pos_params_t* pos_params, time_params_t* time_para
 
 			double action;
 			path->t_f = time_params->t_min;
-			for (unsigned int k = 0; path->t_f <= time_params->t_max; ++k, path->t_f += time_dt) {
+
+			unsigned int i = 1;
+			unsigned int k = 0;
+			for (; k <= time_params->K; path->t_f += time_dt * time_dt_multiplier) {
 				path->dt = path->t_f / path->N;
 				path->xps[0] = (path->x_f - path->x_i) / path->t_f;
 
 				int result = shoot_and_try(path, &action);
 
 				if (result != 0) { // If we failed to find the trajectory
-					//if (path->dt < 1.0e-10) { // FAILED TO FIND, RIP...
-						printf("Failed to find trajectory, aborting...\n");
+					if (path->dt < 1.0e-10) { // FAILED TO FIND, RIP...
+						fprintf(stderr, "Failed to find trajectory, aborting...\n");
+						printf("x_i: %e; x_f: %e; t_f: %e", path->x_i, path->x_f, path->t_f);
 						
 						free(probabilities);
 						free(last_xpN);
 						free(partial_wave_fn);
 
 						return NULL;
-					//}
+					}
 
-					t_min += (k - 1) * path->dt; // We get back to the previous iteration (or decrease t_f_min if k == 0)
-					time_dt *= 0.5;        // We improve the timestep 
-					k = 0;
+					path->t_f -= time_dt * time_dt_multiplier; // We get back to the previous iteration of t_f (may result in a lower value than t_f_min... but intended)
+					time_dt_multiplier *= 0.5;                 // We improve the timestep
+					i = 1;
 				}
-
-				if (1 /* condition to determine */) {
+				else if (i == (unsigned int)(1.0 / time_dt_multiplier)) {
 					const double complex postfactor = cexp(I * action / HBAR) * wave_fn(path->x_i);
 
 					if (p == 0) // We assume here P >= 2
@@ -98,7 +101,11 @@ double* compute_probabilities(pos_params_t* pos_params, time_params_t* time_para
 							partial_wave_fn[k] += factor;	
 					}
 					last_xpN[k] = path->xps[path->N];
+
+					++k;
 				}
+				else
+					++i;
 			}
 		}
 	}
