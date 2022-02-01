@@ -18,7 +18,8 @@ static inline double V(double x, double t) {
 }
 
 static inline double complex wave_fn(double x) {
-	return sqrt(sqrt(M * W0 / (PI * HBAR))) * sqrt(2.0 * M * W0 / HBAR) * x * exp(-0.5 * M * W0 / HBAR * x * x);
+	const double x0 = -2.5 * SCALE_FACTOR;
+	return sqrt(sqrt(M * W0 / (PI * HBAR))) * exp(-0.5 * M * W0 / HBAR * (x - x0) * (x - x0));
 }
 
 #endif // FUNCTIONS_H

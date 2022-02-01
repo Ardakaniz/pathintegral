@@ -26,9 +26,9 @@ typedef struct time_params_t time_params_t;
 double* compute_probabilities(pos_params_t* pos_params, time_params_t* time_params, path_t* path) {
 	// First: we compute the additional data we need in order to make the calculations
 	// How to set x_i_min/max ? c.f. https://www.physics.mcgill.ca/~hilke/719.pdf p.30
-	const double x_i_min = -5 * SCALE_FACTOR;
-	const double x_i_max = 5 * SCALE_FACTOR;
-	const unsigned int P = 200; 
+	const double x_i_min = -15 * SCALE_FACTOR;
+	const double x_i_max = 15 * SCALE_FACTOR;
+	const unsigned int P = 2500; 
 	
 	const double dx_i = (x_i_max - x_i_min) / (double)P;
 	const double dx_f = (pos_params->x_max - pos_params->x_min) / pos_params->N;
@@ -141,12 +141,12 @@ void output_probabilities(double* probabilities, pos_params_t* pos_params, time_
 
 int main(void) {
 	/********************* Simulation parameters **********************/
-	pos_params_t pos_params   = { .x_min = 2.0 * SCALE_FACTOR, .x_max = 8.0 * SCALE_FACTOR, .N = 150 };
-	time_params_t time_params = { .t_min = 0.5 * TIME_FACTOR, .t_max = 1.5 * TIME_FACTOR, .K = 150 };
+	pos_params_t pos_params   = { .x_min = -10.0 * SCALE_FACTOR, .x_max = 10.0 * SCALE_FACTOR, .N = 100 };
+	time_params_t time_params = { .t_min = 0.05 * 2.0 * PI / W0, .t_max = 1.95 * 2.0 * PI / W0, .K = 150 };
 	////////////////////////////////////////////////////////////////////
 
 	path_t path;
-	path.N = 50;
+	path.N = 100;
 
 	if (path_init(&path) != 0)
 		return EXIT_FAILURE;
@@ -158,6 +158,8 @@ int main(void) {
 		path_free(&path);
 		return EXIT_FAILURE;
 	}
+
+	output_probabilities(probabilities, &pos_params, &time_params, "out.dat");
 
 	clock_t clk_end = clock();
 	double time_spent = (double)(clk_end - clk_begin) / CLOCKS_PER_SEC;
