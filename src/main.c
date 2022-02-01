@@ -33,8 +33,8 @@ double* compute_probabilities(pos_params_t* pos_params, time_params_t* time_para
 	const double dx_i = (x_i_max - x_i_min) / (double)P;
 	const double dx_f = (pos_params->x_max - pos_params->x_min) / pos_params->N;
 
-	double t_min = time_params->t_min;
-	double time_dt = (time_params->t_max - t_min) / time_params->K;	
+	const double time_dt = (time_params->t_max - time_params->t_min) / time_params->K;	
+	double time_dt_multiplier = 1.0;
 
 	// pos_params actually holds the values of x_f_min and x_f_max
 	// We can calculate the adapted x_i_min and x_i_max requiring minimal iteration count using pos_params and time_params
@@ -102,7 +102,10 @@ double* compute_probabilities(pos_params_t* pos_params, time_params_t* time_para
 					}
 					last_xpN[k] = path->xps[path->N];
 
+					time_dt_multiplier = fmin(1.0, time_dt_multiplier * 4.0);
+
 					++k;
+					i = 1;
 				}
 				else
 					++i;
