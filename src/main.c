@@ -55,9 +55,9 @@ double* compute_probabilities(pos_params_t* pos_params, time_params_t* time_para
 
 			unsigned int i = 1;
 			unsigned int k = 0;
+			path->xps[0] = (path->x_f - path->x_i) / path->t_f;
 			for (; k <= time_params->K; path->t_f += time_dt * time_dt_multiplier) {
 				path->dt = path->t_f / path->N;
-				path->xps[0] = (path->x_f - path->x_i) / path->t_f;
 
 				int result = shoot_and_try(path, &action);
 

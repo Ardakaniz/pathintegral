@@ -82,7 +82,7 @@ int shoot_and_try(path_t* path, double* action) {
 			return 0; // Yeah!!, we found the solution
 		else { // We did not find the solution yet
 			if (iter_count == 0)
-				xp0_1 = (2.0 * path->x_f - path->xs[path->N] - path->x_i) / path->t_f;
+				xp0_1 = xp0_0 + (path->x_f - path->xs[path->N]) / path->t_f;
 			else {
 				const double tmp = xp0_1;
 				xp0_1 -= err * (xp0_1 - xp0_0) / (err - prev_err);
