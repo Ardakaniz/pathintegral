@@ -65,6 +65,8 @@ void solve_euler_lagrange(path_t* path, double* action) {
 }
 
 int shoot_and_try(path_t* path, double* action) {
+	// See https://www.csun.edu/~lcaretto/me501a/24%20Boundary%20Value%20Problems.pdf
+	// Not adapted for steap potentials...
 	const unsigned int MAX_ITER_COUNT = 25;
 
 	path->xs[0] = path->x_i;
@@ -81,6 +83,7 @@ int shoot_and_try(path_t* path, double* action) {
 		if (err < 1e-3 * SCALE_FACTOR)
 			return 0; // Yeah!!, we found the solution
 		else { // We did not find the solution yet
+			// Finding next xp0 using linear interpolation
 			if (iter_count == 0)
 				xp0_1 = xp0_0 + (path->x_f - path->xs[path->N]) / path->t_f;
 			else {

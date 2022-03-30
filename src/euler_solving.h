@@ -10,7 +10,7 @@ struct path_t {
 	double x_i, x_f, t_f; // Resp. initial position, final position, final time of the given path
 	
 	double dt;      // Numerical computation constants
-	unsigned int N; // Numerical computation constants
+	unsigned int N; // Number of steps in the path
 
 	double* xs;  // Positions
 	double* xps; // Velocities
